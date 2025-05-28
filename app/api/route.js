@@ -11,7 +11,6 @@ export async function GET(request) {
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
     try {
-
         // const command = new GetObjectCommand({
         //     Bucket: process.env.CLOUDFLARE_R2_BUCKET,
         //     Key: 'SDN.XML' // Cambia por tu key real

@@ -33,11 +33,8 @@ export async function GET(request) {
         const found = JSON.stringify(xmlData).includes(name) // Búsqueda básica
         const message = found ? 'Name found in OFAC list' : 'Name not found in OFAC list'
 
-        return NextResponse.json({
-            match: found,
-            message,
-            searchedName: name,
-        })
+        return NextResponse.json({ match: found, message, searchedName: name })
+        
     } catch (error) {
         console.error('Error reading R2 XML:', error)
         return NextResponse.json({ error: 'Failed to fetch XML file' }, { status: 500 })

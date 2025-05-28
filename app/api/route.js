@@ -59,16 +59,13 @@ export async function GET(request) {
                 // Check formattedFullName, formattedLastName, and formattedFirstName
                 return translations.some(translation => {
                     // Convert all values to strings and handle null/undefined
-                    const fullName = String(translation.formattedFullName || '');
-                    const lastName = String(translation.formattedLastName || '');
-                    const firstName = String(translation.formattedFirstName || '');
-                    
-                    return fullName.includes(name) || 
-                           lastName.includes(name) || 
-                           firstName.includes(name);
-                });
-            });
-        });
+                    const fullName = String(translation.formattedFullName || '')
+                    const lastName = String(translation.formattedLastName || '')
+                    const firstName = String(translation.formattedFirstName || '')
+                    return fullName.includes(name) || lastName.includes(name) || firstName.includes(name)
+                })
+            })
+        })
 
         return NextResponse.json({
             match: found,

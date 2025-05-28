@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 import { XMLParser } from 'fast-xml-parser'
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
-
 import fs from 'fs'
 import path from 'path'
 

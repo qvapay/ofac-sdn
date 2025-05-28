@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server'
 import { XMLParser } from 'fast-xml-parser'
 
-import fs from 'fs'
-import path from 'path'
-
 export async function GET(request) {
 
     const { searchParams } = new URL(request.url)

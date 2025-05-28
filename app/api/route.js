@@ -57,9 +57,18 @@ export async function GET(request) {
                 const translations = Array.isArray(nameObj.translations.translation) ? nameObj.translations.translation : [nameObj.translations.translation]
 
                 // Check formattedFullName, formattedLastName, and formattedFirstName
-                return translations.some(translation => { return translation.formattedFullName?.includes(name) || translation.formattedLastName?.includes(name) || translation.formattedFirstName?.includes(name) })
-            })
-        })
+                return translations.some(translation => {
+                    // Convert all values to strings and handle null/undefined
+                    const fullName = String(translation.formattedFullName || '');
+                    const lastName = String(translation.formattedLastName || '');
+                    const firstName = String(translation.formattedFirstName || '');
+                    
+                    return fullName.includes(name) || 
+                           lastName.includes(name) || 
+                           firstName.includes(name);
+                });
+            });
+        });
 
         return NextResponse.json({
             match: found,

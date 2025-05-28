@@ -2,14 +2,8 @@ import { NextResponse } from 'next/server'
 import { XMLParser } from 'fast-xml-parser'
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
 
-export const r2Client = new S3Client({
-    region: "auto",
-    endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
-    credentials: {
-        accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY,
-        secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_KEY,
-    }
-})
+import fs from 'fs'
+import path from 'path'
 
 export async function GET(request) {
 
@@ -19,13 +13,17 @@ export async function GET(request) {
 
     try {
 
-        const command = new GetObjectCommand({
-            Bucket: process.env.CLOUDFLARE_R2_BUCKET,
-            Key: 'SDN.XML' // Cambia por tu key real
-        })
-        const { Body } = await r2Client.send(command)
+        // const command = new GetObjectCommand({
+        //     Bucket: process.env.CLOUDFLARE_R2_BUCKET,
+        //     Key: 'SDN.XML' // Cambia por tu key real
+        // })
+        // const { Body } = await r2Client.send(command)
 
-        const xmlText = await streamToString(Body)
+        // const xmlText = await streamToString(Body)
+        // const parser = new XMLParser()
+        // const xmlData = parser.parse(xmlText)
+
+        const xmlText = fs.readFileSync(path.join(process.cwd(), 'public', 'SDN.XML'), 'utf-8')
         const parser = new XMLParser()
         const xmlData = parser.parse(xmlText)
 
@@ -34,7 +32,7 @@ export async function GET(request) {
         const message = found ? 'Name found in OFAC list' : 'Name not found in OFAC list'
 
         return NextResponse.json({ match: found, message, searchedName: name })
-        
+
     } catch (error) {
         console.error('Error reading R2 XML:', error)
         return NextResponse.json({ error: 'Failed to fetch XML file' }, { status: 500 })

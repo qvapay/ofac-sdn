@@ -2,94 +2,48 @@
 
 import { useState } from "react"
 
+// TODO: Implement the API call to the OFAC API
 export default function OFACChecker() {
+
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [result, setResult] = useState(null)
   const [showResult, setShowResult] = useState(false)
 
-  // Mock OFAC data for demonstration
-  const mockOFACData = [
-    {
-      name: "JOHN SMITH",
-      program: "SDGT",
-      aliases: ["J. SMITH", "JOHNNY SMITH"],
-    },
-    {
-      name: "MARIA GONZALEZ",
-      program: "UKRAINE-EO13662",
-      aliases: ["M. GONZALEZ"],
-    },
-    {
-      name: "VLADIMIR PETROV",
-      program: "RUSSIA-EO14024",
-      aliases: ["V. PETROV", "VLAD PETROV"],
-    },
-  ]
-
+  // Search function
   const performSearch = async () => {
-
     if (!searchTerm.trim()) return
     setIsSearching(true)
     setShowResult(false)
     setResult(null)
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      const response = await fetch(`/api?name=${encodeURIComponent(searchTerm)}`)
+      const data = await response.json()
 
-    const searchLower = searchTerm.toLowerCase()
-    const matches = mockOFACData.filter((entry) => {
-      const nameMatch = entry.name.toLowerCase().includes(searchLower)
-      const aliasMatch = entry.aliases?.some((alias) => alias.toLowerCase().includes(searchLower))
-      return nameMatch || aliasMatch
-    })
-
-    let searchResult
-
-    if (matches.length === 0) {
-      searchResult = {
-        type: "negative",
-        name: searchTerm,
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to perform search')
       }
-    } else {
-      // Calculate match scores
-      const scoredMatches = matches.map((match) => {
-        const exactMatch = match.name.toLowerCase() === searchLower
-        const aliasExactMatch = match.aliases?.some((alias) => alias.toLowerCase() === searchLower)
 
-        let score = 0
-        if (exactMatch || aliasExactMatch) {
-          score = 100
-        } else {
-          // Partial match scoring
-          const nameWords = match.name.toLowerCase().split(" ")
-          const searchWords = searchLower.split(" ")
-          const matchingWords = searchWords.filter((word) => nameWords.some((nameWord) => nameWord.includes(word)))
-          score = (matchingWords.length / searchWords.length) * 80
-        }
+      const searchResult = {
+        type: data.match ? "positive" : "negative",
+        name: searchTerm,
+        message: data.message
+      }
 
-        return {
-          name: match.name,
-          program: match.program,
-          score: Math.round(score),
-          aliases: match.aliases,
-        }
+      setResult(searchResult)
+    } catch (error) {
+      console.error('Search error:', error)
+      setResult({
+        type: "error",
+        name: searchTerm,
+        message: "An error occurred while searching. Please try again."
       })
-
-      const highestScore = Math.max(...scoredMatches.map((m) => m.score))
-
-      searchResult = {
-        type: highestScore >= 90 ? "positive" : "partial",
-        name: searchTerm,
-        matches: scoredMatches.sort((a, b) => b.score - a.score),
-      }
+    } finally {
+      setIsSearching(false)
+      // Trigger result animation
+      setTimeout(() => setShowResult(true), 100)
     }
-
-    setResult(searchResult)
-    setIsSearching(false)
-
-    // Trigger result animation
-    setTimeout(() => setShowResult(true), 100)
   }
 
   const handleKeyPress = (e) => {
@@ -98,9 +52,9 @@ export default function OFACChecker() {
     }
   }
 
+  // Get the result icon
   const getResultIcon = () => {
     if (!result) return null
-
     switch (result.type) {
       case "negative":
         return (
@@ -123,9 +77,9 @@ export default function OFACChecker() {
     }
   }
 
+  // Get the result color
   const getResultColor = () => {
     if (!result) return ""
-
     switch (result.type) {
       case "negative":
         return "border-green-200 bg-green-50"
@@ -136,9 +90,9 @@ export default function OFACChecker() {
     }
   }
 
+  // Get the result title
   const getResultTitle = () => {
     if (!result) return ""
-
     switch (result.type) {
       case "negative":
         return "No Match Found"
@@ -149,9 +103,9 @@ export default function OFACChecker() {
     }
   }
 
+  // Get the result description
   const getResultDescription = () => {
     if (!result) return ""
-
     switch (result.type) {
       case "negative":
         return "The searched name does not appear on the OFAC SDN list."
@@ -201,11 +155,7 @@ export default function OFACChecker() {
                 />
               </div>
 
-              <button
-                onClick={performSearch}
-                disabled={!searchTerm.trim() || isSearching}
-                className="mt-6 px-8 py-6 text-lg rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-white font-medium transition-colors duration-200 flex items-center justify-center mx-auto"
-              >
+              <button onClick={performSearch} disabled={!searchTerm.trim() || isSearching} className="mt-6 px-8 py-6 text-lg rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-white font-medium transition-colors duration-200 flex items-center justify-center mx-auto">
                 {isSearching ? (
                   <>
                     <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -226,10 +176,7 @@ export default function OFACChecker() {
       {/* Results Section */}
       {result && (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-          <div
-            className={`${getResultColor()} border-2 rounded-lg shadow-lg transition-all duration-500 transform ${showResult ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-              }`}
-          >
+          <div className={`${getResultColor()} border-2 rounded-lg shadow-lg transition-all duration-500 transform ${showResult ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}>
             <div className="p-8">
               <div className="flex items-center justify-center mb-6">
                 <div className="animate-pulse">{getResultIcon()}</div>
@@ -237,7 +184,7 @@ export default function OFACChecker() {
 
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">{getResultTitle()}</h2>
-                <p className="text-gray-600 text-lg">{getResultDescription()}</p>
+                <p className="text-gray-600 text-lg">{result.message || getResultDescription()}</p>
               </div>
 
               <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
@@ -250,6 +197,14 @@ export default function OFACChecker() {
                 <p className="text-xl font-semibold text-gray-900">{result.name}</p>
               </div>
 
+              {result.type === "error" && (
+                <div className="mt-8 p-4 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-600 text-center">
+                    {result.message}
+                  </p>
+                </div>
+              )}
+
               {result.matches && result.matches.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -259,17 +214,11 @@ export default function OFACChecker() {
                   {result.matches.map((match, index) => (
                     <div
                       key={index}
-                      className={`bg-white rounded-lg p-6 border-l-4 shadow-sm transition-all duration-300 ${showResult ? "translate-x-0 opacity-100" : "translate-x-4 opacity-0"
-                        } ${match.score >= 90 ? "border-red-400" : "border-yellow-400"}`}
-                      style={{ transitionDelay: `${index * 100}ms` }}
-                    >
+                      className={`bg-white rounded-lg p-6 border-l-4 shadow-sm transition-all duration-300 ${showResult ? "translate-x-0 opacity-100" : "translate-x-4 opacity-0"} ${match.score >= 90 ? "border-red-400" : "border-yellow-400"}`} style={{ transitionDelay: `${index * 100}ms` }} >
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-lg font-semibold text-gray-900">{match.name}</h4>
                         <div className="flex items-center space-x-2">
-                          <span
-                            className={`px-3 py-1 text-sm font-medium rounded-full ${match.score >= 90 ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                              }`}
-                          >
+                          <span className={`px-3 py-1 text-sm font-medium rounded-full ${match.score >= 90 ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`} >
                             {match.score}% Match
                           </span>
                           <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full border">
@@ -291,8 +240,8 @@ export default function OFACChecker() {
 
               <div className="mt-8 p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 text-center">
-                  <strong>Disclaimer:</strong> This is a demonstration tool using mock data. For actual compliance
-                  screening, use official OFAC resources and consult with legal counsel.
+                  <strong>Disclaimer:</strong> This tool uses the official OFAC SDN list for compliance screening.
+                  For official verification, please consult with legal counsel and use official OFAC resources.
                 </p>
               </div>
             </div>

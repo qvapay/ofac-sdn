@@ -1,21 +1,21 @@
 {
-  "name": "ofac-sdn",
-  "version": "0.2.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "fast-xml-parser": "^5.2.3",
-    "next": "15.3.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
-  }
+	"name": "ofac-sdn",
+	"version": "0.3.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"import": "node --env-file-if-exists=.env scripts/import-ofac.mjs",
+		"import:upload": "node --env-file-if-exists=.env scripts/import-ofac.mjs --upload"
+	},
+	"dependencies": {
+		"next": "^16.2.6",
+		"react": "^19.2.6",
+		"react-dom": "^19.2.6"
+	},
+	"devDependencies": {
+		"@aws-sdk/client-s3": "^3.658.1",
+		"fast-xml-parser": "^5.2.3"
+	}
 }

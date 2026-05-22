@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OFAC source XML and generated index — sourced from R2, not the repo
+*.XML
+*.xml
+/data/
+

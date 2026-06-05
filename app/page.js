@@ -1,7 +1,10 @@
+import Image from 'next/image'
+
 export default function Home() {
-    return (
-        <>
-            <style>{`
+
+	return (
+		<>
+			<style>{`
                 * { box-sizing: border-box; }
                 html, body { margin: 0; padding: 0; }
                 body {
@@ -63,17 +66,17 @@ export default function Home() {
                 a { color: #18181b; text-decoration: none; border-bottom: 1px solid #d4d4d8; transition: border-color .15s; }
                 a:hover { border-color: #18181b; }
             `}</style>
-            <main>
-                <img className="logo" src="/ofac-logo.png" alt="OFAC" />
-                <span className="badge">API only</span>
-                <h1>OFAC SDN Screening API</h1>
-                <p className="lead">This service has no web interface. Query it directly:</p>
-                <pre>GET /api?name={'<name>'}&amp;minScore=85</pre>
-                <footer>
-                    Built by <a href="https://github.com/n3omaster" rel="noopener">Erich Garcia</a> for{' '}
-                    <a href="https://www.qvapay.com" rel="noopener">QvaPay</a>
-                </footer>
-            </main>
-        </>
-    )
+			<main>
+				<Image className="logo" src="/ofac-logo.png" alt="OFAC" width={72} height={72} />
+				<span className="badge">API only</span>
+				<h1>OFAC SDN Screening API</h1>
+				<p className="lead">This service has no web interface. Query it directly:</p>
+				<pre>GET /api?name={'<name>'}&amp;minScore=85</pre>
+				<footer>
+					Built by <a href="https://github.com/n3omaster" rel="noopener">Erich Garcia</a> for{' '}
+					<a href="https://www.qvapay.com" rel="noopener">QvaPay</a>
+				</footer>
+			</main>
+		</>
+	)
 }

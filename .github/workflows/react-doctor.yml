@@ -1,0 +1,29 @@
+name: React Doctor
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  react-doctor:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: millionco/react-doctor@v2
+        with:
+          # Only flag issues introduced by the PR — this is the "ratchet":
+          # new PRs stay clean while existing issues are paid down over time.
+          scope: changed
+          blocking: error
+          comment: true
+          review-comments: true
+          node-version: 24
+          version: latest

@@ -57,5 +57,5 @@ XML quirks worth knowing:
 
 - Don't import anything from `lib/` into the import script (or vice versa) unless it's pure utility — the script uses Node's `fs`/`@aws-sdk`, which Next.js shouldn't bundle into the API route.
 - If you change the JSON payload shape (`scripts/import-ofac.mjs` output), also update `lib/ofac-data.js` (`payload.entities` is the contract).
-- `app/page.js` is a single-file landing card explaining the service is API-only (uses `/ofac-logo.png`, plain inline CSS, no Tailwind). `app/layout.js` exists only to satisfy App Router's root-layout requirement.
+- `app/page.js` is a single-file client-component landing card with two live query testers (name + address inputs that fetch `/api` and render results; uses `/ofac-logo.png`, plain inline CSS, no Tailwind). `app/layout.js` exists only to satisfy App Router's root-layout requirement.
 - `*.xml` / `*.XML` is `.gitignore`d (matches `sdn_enhanced.xml`, legacy `SDN.XML`); the canonical source is OFAC's URL or R2.

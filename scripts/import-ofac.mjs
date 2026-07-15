@@ -91,6 +91,14 @@ function normalizeEntity(raw) {
 		})).filter((n) => n.full)
 	})
 
+	const cryptoAddresses = toArray(raw.features?.feature).flatMap((feature) => {
+		const type = textOf(feature.type) ?? ''
+		if (!type.startsWith('Digital Currency Address')) return []
+		const address = textOf(feature.value)
+		if (!address) return []
+		return [{ currency: type.split(' - ')[1] ?? null, address }]
+	})
+
 	return {
 		id,
 		identityId: textOf(raw.generalInfo?.identityId),
@@ -98,6 +106,7 @@ function normalizeEntity(raw) {
 		programs: toArray(raw.sanctionsPrograms?.sanctionsProgram).map(textOf).filter(Boolean),
 		sanctionsTypes: toArray(raw.sanctionsTypes?.sanctionsType).map(textOf).filter(Boolean),
 		names,
+		...(cryptoAddresses.length ? { cryptoAddresses } : {}),
 	}
 }
 
@@ -142,7 +151,7 @@ async function uploadToR2(json) {
 }
 
 async function main() {
-	
+
 	const args = parseArgs(process.argv)
 	const started = Date.now()
 

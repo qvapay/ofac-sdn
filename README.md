@@ -86,9 +86,10 @@ Taking the **max** of the two means a hit on either dimension is enough — bias
 
 | Param      | Type   | Default | Range  | Description                              |
 | ---------- | ------ | ------- | ------ | ---------------------------------------- |
-| `name`     | string | —       | —      | **Required.** Name to screen.            |
-| `limit`    | int    | 10      | 1–50   | Max ranked matches to return.            |
-| `minScore` | int    | 70      | 0–100  | Drop matches below this score.           |
+| `name`     | string | —       | —      | Name to screen. Required unless `address` is given. |
+| `address`  | string | —       | —      | Digital currency address to screen (exact, case-insensitive). Takes precedence over `name`. |
+| `limit`    | int    | 10      | 1–50   | Max ranked matches to return (`name` search only). |
+| `minScore` | int    | 70      | 0–100  | Drop matches below this score (`name` search only). |
 
 #### Response shape
 
@@ -127,11 +128,21 @@ Taking the **max** of the two means a hit on either dimension is enough — bias
 }
 ```
 
+#### Wallet screening
+
+The SDN list flags ~950 digital currency addresses (BTC, ETH, TRX, USDT, XMR, …) as "Digital Currency Address" features. Screen one with:
+
+```bash
+$ curl 'https://your-deployment.vercel.app/api?address=0x098B716B8Aaf21512996dC57EB0615e2383E2f96'
+```
+
+Address matches are exact (case-insensitive) — no fuzzy stage. Each result carries `matchedAddress` and `currency` instead of `matchedName`, always with `score: 100`.
+
 #### Errors
 
 | Status | Meaning                                          |
 | ------ | ------------------------------------------------ |
-| `400`  | Missing `name` param.                            |
+| `400`  | Missing `name`/`address` param.                  |
 | `500`  | `OFAC_INDEX_URL` not configured or R2 unreachable. |
 
 ## Getting started

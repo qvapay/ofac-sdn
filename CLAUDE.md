@@ -30,13 +30,13 @@ See `.env.example`.
 
 The hot path (`GET /api?name=...`):
 
-1. `lib/ofac-data.js` — singleton loader. First call fetches `OFAC_INDEX_URL`, parses ~5 MB of normalized JSON, builds a trigram inverted index (trigram → `Uint32Array` of name indices). Cached in module scope. Fluid Compute reuses instances across requests, so cold-start cost (~2–4 s) is paid once per warm instance.
+1. `lib/ofac-data.js` — singleton loader. First call fetches `OFAC_INDEX_URL`, parses ~9 MB of normalized JSON, builds a trigram inverted index (trigram → `Uint32Array` of name indices) plus `cryptoIndex` (lowercased digital-currency address → matches, exact lookup). Cached in module scope. Fluid Compute reuses instances across requests, so cold-start cost (~2–4 s) is paid once per warm instance.
 2. `lib/search.js` — two-stage search. **Stage 1**: tally trigram overlap between the query and every indexed name, keep the top `candidatePool` (default 400) name indices. **Stage 2**: run the full scorer on each candidate; collapse to best score per *entity* (a single entity has many aliases). Return ranked top `limit`.
 3. `lib/scoring.js` — `score(query, target)` returns 0–100, taking `max(jaroWinkler, tokenSetRatio)`. Normalization strips accents (NFD), lowercases, and collapses non-alphanumeric to spaces. Token-set ratio is rapidfuzz-style (intersection + diffs → three sorted strings → best Jaro-Winkler among them), which makes word order and extra middle names mostly free.
 
 The cold-path:
 
-- `scripts/import-ofac.mjs` reads OFAC's enhanced XML (local file or download), normalizes each entity to `{ id, identityId, type, programs, sanctionsTypes, names[] }`, writes `data/ofac-entities.json`, and optionally PUTs to R2 via `@aws-sdk/client-s3`. The SDK is a devDep — runtime never touches it.
+- `scripts/import-ofac.mjs` reads OFAC's enhanced XML (local file or download), normalizes each entity to `{ id, identityId, type, programs, sanctionsTypes, names[], cryptoAddresses[]? }` (`cryptoAddresses` — `{ currency, address }` from "Digital Currency Address - *" features — is only present when non-empty), writes `data/ofac-entities.json`, and optionally PUTs to R2 via `@aws-sdk/client-s3`. The SDK is a devDep — runtime never touches it.
 
 ## Data shape
 
@@ -48,7 +48,8 @@ XML quirks worth knowing:
 
 ## Search query semantics
 
-- `name` (required), `limit` (1–50, default 10), `minScore` (0–100, default 70).
+- `name` or `address` (one required; `address` wins if both given), `limit` (1–50, default 10), `minScore` (0–100, default 70).
+- `address` is an exact, case-insensitive lookup against `cryptoIndex` (`lib/search.js` `searchAddress`) — no fuzzy stage, results always `score: 100` with `matchedAddress`/`currency` instead of `matchedName`. `limit`/`minScore` don't apply.
 - Very short queries (<3 normalized chars) bypass the trigram filter and linear-scan all names — slow but correct.
 - The returned `score` is per-entity-best, so two entities with the same primary name don't both surface unless they have distinct best aliases.
 

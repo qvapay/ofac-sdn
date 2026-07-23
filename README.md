@@ -27,7 +27,7 @@ $ curl 'https://your-deployment.vercel.app/api?name=putin&minScore=85'
 
 ## Why this exists
 
-OFAC publishes the SDN list as a [97 MB XML file](https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ENHANCED_XML) with ~18 000 entities and ~40 000 aliases (transliterations, A.K.A., F.K.A., name variants in non-Latin scripts, etc.). Doing a real-time fuzzy match against that — handling typos, word order, missing middle names, Spanish-vs-English spellings, Cyrillic transliterations — is non-trivial.
+OFAC publishes the SDN list as a [~100 MB XML file](https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML) with ~19 000 entities and ~50 000 aliases (transliterations, A.K.A., F.K.A., name variants in non-Latin scripts, etc.). Doing a real-time fuzzy match against that — handling typos, word order, missing middle names, Spanish-vs-English spellings, Cyrillic transliterations — is non-trivial.
 
 Most teams reach for an enterprise compliance vendor and pay per-call. This repo is the inverse: a self-hosted, single-file dataset, zero database, that turns the problem into a ~150-line search routine running entirely in memory on a serverless function.
 
@@ -48,7 +48,7 @@ Most teams reach for an enterprise compliance vendor and pay per-call. This repo
                   │  Cold-start (once per warm Fluid instance)  │
                   │                                             │
    OFAC XML ──┐   │   ┌─────────────────┐    ┌──────────────┐   │
-   (97 MB)    │   │   │ ofac-entities   │───▶│ trigram      │   │
+   (~100 MB)  │   │   │ ofac-entities   │───▶│ trigram      │   │
               │   │   │ .json (~8 MB)   │    │ inverted     │   │
    import ────┴──▶│   │ in Cloudflare R2│    │ index in RAM │   │
    script        │   └─────────────────┘    └──────┬───────┘   │
@@ -130,7 +130,7 @@ Taking the **max** of the two means a hit on either dimension is enough — bias
 
 #### Wallet screening
 
-The SDN list flags ~950 digital currency addresses (BTC, ETH, TRX, USDT, XMR, …) as "Digital Currency Address" features. Screen one with:
+The SDN list flags ~960 digital currency addresses (BTC, ETH, TRX, USDT, XMR, …) as "Digital Currency Address" features. Screen one with:
 
 ```bash
 $ curl 'https://your-deployment.vercel.app/api?address=0x098B716B8Aaf21512996dC57EB0615e2383E2f96'
@@ -159,7 +159,7 @@ npm run import
 node scripts/import-ofac.mjs --xml=/path/to/sdn_enhanced.xml
 ```
 
-Output: `data/ofac-entities.json` (~8 MB, ~18 000 entities).
+Output: `data/ofac-entities.json` (~9 MB, ~19 000 entities).
 
 ### 2. Upload to Cloudflare R2
 
@@ -190,25 +190,25 @@ Drop-in on [Vercel](https://vercel.com) — set `OFAC_INDEX_URL` in the project'
 
 ## Keeping the data fresh
 
-OFAC updates the SDN list multiple times per week. To refresh:
+OFAC updates the SDN list multiple times per week. To refresh manually:
 
 ```bash
 npm run import:upload   # re-download, re-parse, re-upload to R2
 ```
 
-The API will pick up the new index the next time a function instance cold-starts. A simple cron job (GitHub Actions, Vercel Cron, Cloudflare Workers) running this nightly is enough for most use cases.
+This repo also ships a GitHub Actions workflow ([`.github/workflows/ofac-import.yml`](.github/workflows/ofac-import.yml)) that runs the import on weekdays at 23:00 UTC and pushes the result to R2 — set the `R2_*` repository secrets and it's fully automated. The API picks up the new index the next time a function instance cold-starts.
 
 ## Cost & performance
 
 | Metric                | Value                                         |
 | --------------------- | --------------------------------------------- |
-| Dataset size          | ~8 MB JSON (down from 97 MB XML)              |
+| Dataset size          | ~9 MB JSON (down from ~100 MB XML)            |
 | R2 storage cost       | <$0.001/month                                 |
 | R2 egress cost        | $0 (Cloudflare has no egress fees)            |
 | Function cold-start   | ~1–3 s (download + index build, paid once)    |
 | Warm-request latency  | 2–10 ms                                       |
-| Entities indexed      | ~18 000                                       |
-| Names (incl. aliases) | ~42 000                                       |
+| Entities indexed      | ~19 000                                       |
+| Names (incl. aliases) | ~50 000                                       |
 
 ## Design notes
 

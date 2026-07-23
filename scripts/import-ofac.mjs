@@ -27,7 +27,7 @@ const ROOT = resolve(__dirname, '..')
 const DEFAULT_XML_PATH = resolve(ROOT, 'sdn_enhanced.xml')
 const FALLBACK_XML_PATH = resolve(ROOT, 'public/sdn_enhanced.xml')
 const DEFAULT_OUT_PATH = resolve(ROOT, 'data/ofac-entities.json')
-const DEFAULT_OFAC_URL = 'https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ENHANCED_XML'
+const DEFAULT_OFAC_URL = 'https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML'
 
 function parseArgs(argv) {
 	const args = { upload: false }
@@ -121,7 +121,7 @@ async function uploadToR2(json) {
 	const required = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET']
 	const missing = required.filter((k) => !process.env[k])
 	if (missing.length) { throw new Error(`Missing R2 env vars: ${missing.join(', ')}`) }
-	const key = process.env.R2_KEY ?? 'ofac-entities.json'
+	const key = process.env.R2_KEY || 'ofac-entities.json'
 
 	// Lazy import so devs without the SDK installed can still run the script
 	// without --upload.

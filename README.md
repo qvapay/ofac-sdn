@@ -4,7 +4,7 @@ A tiny, fast HTTP API that answers one question:
 
 > _"Is this name on the U.S. Treasury's sanctions list, and how confident are you?"_
 
-Send a name, get back a ranked list of matches from the [OFAC Specially Designated Nationals (SDN) list](https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists) with a 0–100 confidence score. Built for the kind of compliance checks fintech, crypto, and remittance products do thousands of times a day — but light enough to run on a single serverless function.
+Send a name, get back a ranked list of matches from the [OFAC Specially Designated Nationals (SDN) list](https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists) — plus optional parallel watchlists (Cuban PCC directory, ANPP deputies, and any list you add) — with a 0–100 confidence score. Built for the kind of compliance checks fintech, crypto, and remittance products do thousands of times a day — but light enough to run on a single serverless function.
 
 ```bash
 $ curl 'https://your-deployment.vercel.app/api?name=putin&minScore=85'
@@ -90,6 +90,7 @@ Taking the **max** of the two means a hit on either dimension is enough — bias
 | `address`  | string | —       | —      | Digital currency address to screen (exact, case-insensitive). Takes precedence over `name`. |
 | `limit`    | int    | 10      | 1–50   | Max ranked matches to return (`name` search only). |
 | `minScore` | int    | 70      | 0–100  | Drop matches below this score (`name` search only). |
+| `lists`    | string | all     | —      | Comma-separated list ids to search (e.g. `lists=ofac` or `lists=pcc,anpp`). Default searches every loaded list. Unknown ids → `400`. |
 
 #### Response shape
 
@@ -142,8 +143,45 @@ Address matches are exact (case-insensitive) — no fuzzy stage. Each result car
 
 | Status | Meaning                                          |
 | ------ | ------------------------------------------------ |
-| `400`  | Missing `name`/`address` param.                  |
-| `500`  | `OFAC_INDEX_URL` not configured or R2 unreachable. |
+| `400`  | Missing `name`/`address` param, or unknown id in `lists`. |
+| `500`  | `LISTS_MANIFEST_URL`/`OFAC_INDEX_URL` not configured or R2 unreachable. |
+
+## Multiple lists
+
+The engine is list-agnostic: OFAC is just one list among N. Every list is a JSON file in R2 with the same `{ entities: [...] }` shape, enumerated by a `manifest.json`:
+
+```jsonc
+{
+  "version": 1,
+  "lists": [
+    { "id": "ofac", "label": "OFAC SDN",                    "key": "ofac-entities.json" },
+    { "id": "pcc",  "label": "PCC — Directorio de personas", "key": "lists/pcc.json" },
+    { "id": "anpp", "label": "ANPP — Diputados",             "key": "lists/anpp.json" }
+  ]
+}
+```
+
+Set `LISTS_MANIFEST_URL` to the manifest's public URL and the runtime loads every list into one shared trigram index at cold-start, tagging each entity with its `list` id and `source`. (`key` resolves relative to the manifest URL, so everything lives in one public bucket. Without `LISTS_MANIFEST_URL`, the runtime falls back to `OFAC_INDEX_URL` and behaves exactly as the original OFAC-only API.)
+
+### Bundled Cuban lists
+
+Two scrapers ship in [`scripts/sources/`](scripts/sources):
+
+- **`pcc`** — the [PCC people directory](https://www.pcc.cu/index.php/directorio-personas) (~100 senior party officials, with cargo and entity)
+- **`anpp`** — the [ANPP deputies roster](https://www.parlamentocubano.gob.cu/diputados) (~470 deputies, with cargo and org memberships)
+
+```bash
+npm run import:lists          # scrape → data/{pcc,anpp}-entities.json
+npm run import:lists:upload   # + push lists and manifest.json to R2
+```
+
+The [`cuba-import.yml`](.github/workflows/cuba-import.yml) workflow re-scrapes weekly (Mondays 06:00 UTC) using the same `R2_*` secrets as the OFAC import.
+
+### Adding your own list
+
+1. Drop a module in `scripts/sources/` exporting `{ id, label, source, fetchEntities }`, where `fetchEntities()` resolves to entities shaped like `{ id, source, type, programs, names: [{ full }] }` (extra fields pass through to API responses).
+2. Register it in the `SOURCES` array of `scripts/import-lists.mjs`.
+3. Run `npm run import:lists:upload` — the manifest is upserted automatically and the runtime picks the list up on next cold-start. No runtime code changes.
 
 ## Getting started
 

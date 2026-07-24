@@ -67,12 +67,12 @@ function Screener({ param, label, mode, placeholder, hint, examples }) {
 			{state.status === 'done' && (
 				state.data.total === 0 ? (
 					<div className="result clear">
-						<strong>No match.</strong> Not on the SDN list <span className="took">{state.data.tookMs} ms</span>
+						<strong>No match.</strong> Not on any screened list <span className="took">{state.data.tookMs} ms</span>
 					</div>
 				) : (
 					<div className="result match">
 						<div className="match-head">
-							<strong>{state.data.total} match{state.data.total > 1 ? 'es' : ''}</strong> on the SDN list
+							<strong>{state.data.total} match{state.data.total > 1 ? 'es' : ''}</strong> found
 							<span className="took">{state.data.tookMs} ms</span>
 						</div>
 						{state.data.results.slice(0, 5).map((r, i) => (
@@ -82,9 +82,10 @@ function Screener({ param, label, mode, placeholder, hint, examples }) {
 									<span className="score" title="Match score">{r.score}</span>
 								</div>
 								<div className="entity-meta">
-									{r.entity.type}
+									{r.entity.source ?? 'OFAC'} · {r.entity.type}
 									{r.currency ? ` · ${r.currency}` : ''}
-									{r.entity.programs.length ? ` · ${r.entity.programs.join(', ')}` : ''}
+									{r.entity.programs?.length ? ` · ${r.entity.programs.join(', ')}` : ''}
+									{r.entity.role ? ` · ${r.entity.role}` : ''}
 								</div>
 							</div>
 						))}
@@ -281,7 +282,7 @@ export default function Home() {
 					<Image className="logo" src="/ofac-logo.png" alt="OFAC" width={72} height={72} />
 					<span className="badge">Live API</span>
 					<h1>OFAC SDN Screening API</h1>
-					<p className="lead">Screen names and crypto wallets against the U.S. Treasury SDN list — try it live:</p>
+					<p className="lead">Screen names and crypto wallets against the U.S. Treasury SDN list and Cuban government rosters (PCC, ANPP) — try it live:</p>
 				</div>
 				<Screener
 					param="name"

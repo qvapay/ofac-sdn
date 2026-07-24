@@ -1,0 +1,46 @@
+name: Cuba lists import
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC — these rosters change rarely (5-year legislatures).
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: cuba-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scrape and upload lists + manifest to R2
+        run: node scripts/import-lists.mjs --upload
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_KEY: ${{ secrets.R2_KEY }}
+
+      # Warm Fluid instances cache the dataset in memory forever; a redeploy
+      # recycles them so the API picks up the new index immediately.
+      - name: Trigger Vercel redeploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$DEPLOY_HOOK" ]; then
+            curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null && echo "Vercel redeploy triggered"
+          else
+            echo "VERCEL_DEPLOY_HOOK_URL not set, skipping redeploy"
+          fi

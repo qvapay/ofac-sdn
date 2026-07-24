@@ -8,6 +8,8 @@
 		"start": "next start",
 		"import": "node --env-file-if-exists=.env scripts/import-ofac.mjs",
 		"import:upload": "node --env-file-if-exists=.env scripts/import-ofac.mjs --upload",
+		"import:lists": "node --env-file-if-exists=.env scripts/import-lists.mjs",
+		"import:lists:upload": "node --env-file-if-exists=.env scripts/import-lists.mjs --upload",
 		"doctor": "npx react-doctor@latest"
 	},
 	"dependencies": {
@@ -17,6 +19,7 @@
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.658.1",
+		"cheerio": "^1.2.0",
 		"fast-xml-parser": "^5.2.3"
 	}
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { searchName, searchAddress } from '../../lib/search.js'
+import { searchName, searchAddress, UnknownListError } from '../../lib/search.js'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -16,17 +16,22 @@ export async function GET(request) {
 
 	const limit = clampInt(searchParams.get('limit'), 10, 1, 50)
 	const minScore = clampInt(searchParams.get('minScore'), 70, 0, 100)
+	const listsParam = searchParams.get('lists')
+	const lists = listsParam ? listsParam.split(',') : null
 
 	try {
 		const started = Date.now()
 		const result = address?.trim()
-			? await searchAddress(address)
-			: await searchName(name, { limit, minScore })
+			? await searchAddress(address, { lists })
+			: await searchName(name, { limit, minScore, lists })
 		return NextResponse.json({
 			...result,
 			tookMs: Date.now() - started,
 		})
 	} catch (err) {
+		if (err instanceof UnknownListError) {
+			return NextResponse.json({ error: err.message }, { status: 400 })
+		}
 		console.error('[ofac] search failed:', err)
 		return NextResponse.json({ error: 'Search failed', detail: err.message }, { status: 500 })
 	}

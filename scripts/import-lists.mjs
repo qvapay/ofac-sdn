@@ -19,9 +19,10 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as pcc from './sources/pcc.mjs'
 import * as anpp from './sources/anpp.mjs'
+import * as fhrc from './sources/fhrc.mjs'
 import { r2Client, putJson, getJson } from './lib/r2.mjs'
 
-const SOURCES = [pcc, anpp]
+const SOURCES = [pcc, anpp, fhrc]
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = resolve(__dirname, '../data')

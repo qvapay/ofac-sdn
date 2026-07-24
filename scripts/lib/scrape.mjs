@@ -2,12 +2,12 @@
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
 
-export async function fetchHtml(url, { retries = 3, timeoutMs = 60000 } = {}) {
+export async function fetchHtml(url, { retries = 3, timeoutMs = 60000, headers = {} } = {}) {
 	let lastErr
 	for (let attempt = 1; attempt <= retries; attempt++) {
 		try {
 			const res = await fetch(url, {
-				headers: { 'user-agent': UA, accept: 'text/html' },
+				headers: { 'user-agent': UA, accept: 'text/html', ...headers },
 				signal: AbortSignal.timeout(timeoutMs),
 			})
 			if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)

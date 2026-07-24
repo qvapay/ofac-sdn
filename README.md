@@ -4,7 +4,7 @@ A tiny, fast HTTP API that answers one question:
 
 > _"Is this name on the U.S. Treasury's sanctions list, and how confident are you?"_
 
-Send a name, get back a ranked list of matches from the [OFAC Specially Designated Nationals (SDN) list](https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists) — plus optional parallel watchlists (Cuban PCC directory, ANPP deputies, and any list you add) — with a 0–100 confidence score. Built for the kind of compliance checks fintech, crypto, and remittance products do thousands of times a day — but light enough to run on a single serverless function.
+Send a name, get back a ranked list of matches from the [OFAC Specially Designated Nationals (SDN) list](https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists) — plus optional parallel watchlists (Cuban PCC directory, ANPP deputies, FHRC Represores Cubanos, and any list you add) — with a 0–100 confidence score. Built for the kind of compliance checks fintech, crypto, and remittance products do thousands of times a day — but light enough to run on a single serverless function.
 
 ```bash
 $ curl 'https://your-deployment.vercel.app/api?name=putin&minScore=85'
@@ -169,9 +169,10 @@ Two scrapers ship in [`scripts/sources/`](scripts/sources):
 
 - **`pcc`** — the [PCC people directory](https://www.pcc.cu/index.php/directorio-personas) (~100 senior party officials, with cargo and entity)
 - **`anpp`** — the [ANPP deputies roster](https://www.parlamentocubano.gob.cu/diputados) (~470 deputies, with cargo and org memberships)
+- **`fhrc`** — the [FHRC Represores Cubanos database](https://represorescubanosfhrc.com/represores) (~1,700 documented individuals, with institution; sourced from the site's public Supabase API since the frontend is a SPA)
 
 ```bash
-npm run import:lists          # scrape → data/{pcc,anpp}-entities.json
+npm run import:lists          # scrape → data/{pcc,anpp,fhrc}-entities.json
 npm run import:lists:upload   # + push lists and manifest.json to R2
 ```
 

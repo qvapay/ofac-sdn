@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import pkg from '../package.json'
 
 function Screener({ param, label, mode, placeholder, hint, examples }) {
 	const [value, setValue] = useState('')
@@ -151,7 +152,18 @@ export default function Home() {
                     box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
                 }
                 h1 { font-size: 22px; margin: 0 0 8px; font-weight: 700; letter-spacing: -0.02em; }
-                p.lead { color: #475569; margin: 0 0 28px; font-size: 15px; }
+                p.lead { color: #475569; margin: 0 0 14px; font-size: 15px; }
+                .sources { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 0 0 28px; }
+                .source-chip {
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.03em;
+                    color: #475569;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 999px;
+                    padding: 3px 11px;
+                }
                 .example { margin: 0 0 26px; text-align: left; }
                 .example:last-of-type { margin-bottom: 4px; }
                 .example-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 2px 8px; }
@@ -269,6 +281,13 @@ export default function Home() {
                     color: #64748b;
                     text-align: center;
                 }
+                .version {
+                    display: inline-block;
+                    margin-left: 8px;
+                    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                    font-size: 11px;
+                    color: #94a3b8;
+                }
                 a { color: #0f172a; text-decoration: none; border-bottom: 1px solid #cbd5e1; transition: border-color .15s; }
                 a:hover { border-color: #0f172a; }
                 @media (max-width: 480px) {
@@ -282,7 +301,12 @@ export default function Home() {
 					<Image className="logo" src="/ofac-logo.png" alt="OFAC" width={72} height={72} />
 					<span className="badge">Live API</span>
 					<h1>OFAC SDN Screening API</h1>
-					<p className="lead">Screen names and crypto wallets against the U.S. Treasury SDN list and Cuban government rosters (PCC, ANPP) — try it live:</p>
+					<p className="lead">Screen names and crypto wallets against sanctions and government watchlists — try it live:</p>
+					<div className="sources" aria-label="Data sources screened">
+						<span className="source-chip">OFAC SDN</span>
+						<span className="source-chip">PCC Directorio</span>
+						<span className="source-chip">ANPP Diputados</span>
+					</div>
 				</div>
 				<Screener
 					param="name"
@@ -306,6 +330,7 @@ export default function Home() {
 				<footer>
 					Built by <a href="https://x.com/erichgarciacruz" rel="noopener">Erich Garcia</a> for{' '}
 					<a href="https://www.qvapay.com" rel="noopener">QvaPay</a>
+					<span className="version">v{pkg.version}</span>
 				</footer>
 			</main>
 		</>

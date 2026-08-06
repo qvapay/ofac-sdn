@@ -1,19 +1,22 @@
-name: Cuba lists import
+name: Community list import
 
+# Rebuild the community list whenever a report issue changes state — the
+# moderation act is swapping the `pendiente` label for `aprobado` (or closing /
+# unlabeling to retract). Only issues carrying `reporte-comunidad` trigger it.
 on:
-  schedule:
-    # Mondays at 06:00 UTC — these rosters change rarely (5-year legislatures).
-    - cron: '0 6 * * 1'
+  issues:
+    types: [labeled, unlabeled, edited, closed, reopened, deleted]
   workflow_dispatch:
 
 concurrency:
-  group: cuba-import
+  group: community-import
   cancel-in-progress: false
 
 jobs:
   import:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'reporte-comunidad')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -24,11 +27,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Scrape and upload lists + manifest to R2
-        run: node scripts/import-lists.mjs --upload
+      - name: Build community list from approved issues and upload to R2
+        run: node scripts/import-lists.mjs community --upload
         env:
-          # community source reads GitHub issues — authenticate to avoid the
-          # anonymous rate limit shared across Actions runner IPs.
           GITHUB_TOKEN: ${{ github.token }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}

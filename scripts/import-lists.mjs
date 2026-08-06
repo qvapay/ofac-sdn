@@ -20,9 +20,10 @@ import { fileURLToPath } from 'node:url'
 import * as pcc from './sources/pcc.mjs'
 import * as anpp from './sources/anpp.mjs'
 import * as fhrc from './sources/fhrc.mjs'
+import * as community from './sources/community.mjs'
 import { r2Client, putJson, getJson } from './lib/r2.mjs'
 
-const SOURCES = [pcc, anpp, fhrc]
+const SOURCES = [pcc, anpp, fhrc, community]
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = resolve(__dirname, '../data')
@@ -57,8 +58,9 @@ async function main() {
 		console.log(`[lists] scraping ${src.id} (${src.label})…`)
 		const entities = await src.fetchEntities()
 		// A redesigned page that no longer matches our selectors would come back
-		// empty — never overwrite a working list with nothing.
-		if (entities.length === 0) throw new Error(`Source "${src.id}" returned 0 entities — refusing to overwrite the list`)
+		// empty — never overwrite a working list with nothing. Sources that can
+		// legitimately be empty (community, pre-first-approval) opt out.
+		if (entities.length === 0 && !src.allowEmpty) throw new Error(`Source "${src.id}" returned 0 entities — refusing to overwrite the list`)
 
 		const payload = {
 			listId: src.id,

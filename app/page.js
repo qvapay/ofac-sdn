@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 import pkg from '../package.json'
 
@@ -128,29 +129,6 @@ export default function Home() {
                 }
                 .top { text-align: center; }
                 .logo { width: 72px; height: 72px; object-fit: contain; margin: 0 auto 18px; display: block; }
-                .badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    font-size: 11px;
-                    font-weight: 700;
-                    letter-spacing: 0.08em;
-                    text-transform: uppercase;
-                    color: #166534;
-                    background: #f0fdf4;
-                    border: 1px solid #bbf7d0;
-                    padding: 4px 12px;
-                    border-radius: 999px;
-                    margin-bottom: 16px;
-                }
-                .badge::before {
-                    content: "";
-                    width: 7px;
-                    height: 7px;
-                    border-radius: 999px;
-                    background: #22c55e;
-                    box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
-                }
                 h1 { font-size: 22px; margin: 0 0 8px; font-weight: 700; letter-spacing: -0.02em; }
                 p.lead { color: #475569; margin: 0 0 14px; font-size: 15px; }
                 .sources { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 0 0 28px; }
@@ -281,6 +259,15 @@ export default function Home() {
                     color: #64748b;
                     text-align: center;
                 }
+                .footer-source {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    font-size: 12.5px;
+                    margin-bottom: 10px;
+                }
+                .footer-source img { opacity: 0.85; }
                 .version {
                     display: inline-block;
                     margin-left: 8px;
@@ -298,8 +285,7 @@ export default function Home() {
             `}</style>
 			<main>
 				<div className="top">
-					<Image className="logo" src="/ofac-logo.png" alt="OFAC" width={72} height={72} />
-					<span className="badge">Live API</span>
+					<Image className="logo" src="/qvapay-logo.png" alt="QvaPay" width={72} height={72} />
 					<h1>OFAC SDN Screening API</h1>
 					<p className="lead">Screen names and crypto wallets against sanctions and government watchlists — try it live:</p>
 					<div className="sources" aria-label="Data sources screened">
@@ -307,6 +293,7 @@ export default function Home() {
 						<span className="source-chip">PCC Directorio</span>
 						<span className="source-chip">ANPP Diputados</span>
 						<span className="source-chip">FHRC Represores</span>
+						<span className="source-chip">Reportes comunidad</span>
 					</div>
 				</div>
 				<Screener
@@ -329,8 +316,20 @@ export default function Home() {
 					]}
 				/>
 				<footer>
+					<div className="footer-source">
+						<Image src="/ofac-logo.png" alt="" width={18} height={18} />
+						<span>
+							Primary data source:{' '}
+							<a href="https://ofac.treasury.gov/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists" rel="noopener">
+								OFAC SDN list
+							</a>{' '}
+							· U.S. Department of the Treasury
+						</span>
+					</div>
 					Built by <a href="https://x.com/erichgarciacruz" rel="noopener">Erich Garcia</a> for{' '}
-					<a href="https://www.qvapay.com" rel="noopener">QvaPay</a>
+					<a href="https://www.qvapay.com" rel="noopener">QvaPay</a> ·{' '}
+					<a href="https://github.com/qvapay/ofac-sdn" rel="noopener">GitHub</a> ·{' '}
+					<Link href="/report">Reportar</Link>
 					<span className="version">v{pkg.version}</span>
 				</footer>
 			</main>

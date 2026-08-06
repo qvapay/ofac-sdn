@@ -1,6 +1,6 @@
 {
 	"name": "ofac-sdn",
-	"version": "1.1.0",
+	"version": "2.0.0",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -13,9 +13,9 @@
 		"doctor": "npx react-doctor@latest"
 	},
 	"dependencies": {
-		"next": "^16.2.6",
-		"react": "^19.2.6",
-		"react-dom": "^19.2.6"
+		"next": "^16.3.0",
+		"react": "^19.2.8",
+		"react-dom": "^19.2.8"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.658.1",

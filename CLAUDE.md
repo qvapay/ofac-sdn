@@ -8,7 +8,7 @@ Next.js 16 service that scores a name against the OFAC SDN list **plus parallel 
 
 ## Commands
 
-- `npm run dev` — start the dev server on http://localhost:3000 (only route is `GET /api`)
+- `npm run dev` — start the dev server on http://localhost:3000 (routes: `GET /api`, `POST /api/report`, pages `/` and `/report`)
 - `npm run build` / `npm start` — production
 - `npm run lint` — Next.js lint
 - `npm run import` — parse `sdn_enhanced.xml` (or download from OFAC) → write `data/ofac-entities.json`
@@ -24,6 +24,7 @@ No test runner is configured.
 
 - **Runtime** (`app/api/route.js`): `LISTS_MANIFEST_URL` — public R2 URL of `manifest.json` (multi-list mode; list `key`s resolve relative to it, so manifest + lists share one public bucket). Fallback: `OFAC_INDEX_URL` — public R2 URL of `ofac-entities.json`, OFAC-only. The route fails 500 with neither.
 - **Import scripts** (`scripts/import-ofac.mjs`, `scripts/import-lists.mjs`): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, optionally `R2_KEY`. Only needed when `--upload` is passed.
+- **Report intake** (`app/api/report/route.js`): `GITHUB_REPORT_TOKEN` — fine-grained PAT with Issues read/write; `GITHUB_REPORT_REPO` optional (default `qvapay/ofac-sdn`). Without the token, `POST /api/report` fails 500; everything else is unaffected.
 - Optional: `OFAC_SDN_XML_URL` overrides the default OFAC enhanced-XML download URL.
 
 See `.env.example`.
@@ -38,7 +39,8 @@ The hot path (`GET /api?name=...`):
 
 The cold-path:
 
-- `scripts/import-lists.mjs` runs the scrapers in `scripts/sources/` (`pcc.mjs` — pcc.cu Drupal table, paginated `?page=N`; `anpp.mjs` — parlamentocubano.gob.cu, all deputies on one page; `fhrc.mjs` — represorescubanosfhrc.com, a SPA whose data lives in a public Supabase table: the module extracts the Supabase URL + anon key from the deployed JS bundle at run time and pages through the REST API). Each source exports `{ id, label, source, fetchEntities }` and returns entities in the same shape the runtime consumes (`type: 'Individual'`, `names: [{ full, isPrimary }]`, plus `role`/`org`/`organizations`/`url` extras that pass through to responses). With `--upload` it pushes `lists/<id>.json` to R2 and upserts `manifest.json` (seeding an `ofac` entry pointing at `R2_KEY`). It refuses to write a list that scraped 0 entities (site-redesign guard). Adding a list = new module in `scripts/sources/` + register in `SOURCES` — zero runtime changes. Shared helpers live in `scripts/lib/` (`scrape.mjs`, `r2.mjs`).
+- `scripts/import-lists.mjs` runs the scrapers in `scripts/sources/` (`pcc.mjs` — pcc.cu Drupal table, paginated `?page=N`; `anpp.mjs` — parlamentocubano.gob.cu, all deputies on one page; `fhrc.mjs` — represorescubanosfhrc.com, a SPA whose data lives in a public Supabase table: the module extracts the Supabase URL + anon key from the deployed JS bundle at run time and pages through the REST API). Each source exports `{ id, label, source, fetchEntities }` and returns entities in the same shape the runtime consumes (`type: 'Individual'`, `names: [{ full, isPrimary }]`, plus `role`/`org`/`organizations`/`url` extras that pass through to responses). With `--upload` it pushes `lists/<id>.json` to R2 and upserts `manifest.json` (seeding an `ofac` entry pointing at `R2_KEY`). It refuses to write a list that scraped 0 entities (site-redesign guard) unless the source exports `allowEmpty = true`.
+- **Community reports pipeline**: `/report` (page) → `POST /api/report` validates (honeypot, per-instance rate limit, ≥1 evidence URL required) and opens a public GitHub issue on `GITHUB_REPORT_REPO` with labels `reporte-comunidad` + `pendiente` and a machine-readable ```json block. Moderation = swap `pendiente` for `aprobado` on the issue. `scripts/sources/community.mjs` (exports `allowEmpty`) pages `issues?labels=reporte-comunidad,aprobado&state=all`, parses the json block, and emits entities (`id: community-<issue#>`, `url` → the issue as audit trail, `cryptoAddresses` from reported wallets). `.github/workflows/community-import.yml` re-runs `import-lists.mjs community --upload` + Vercel redeploy on any labeled/unlabeled/edited/closed/reopened/deleted event for issues carrying `reporte-comunidad`. Adding a list = new module in `scripts/sources/` + register in `SOURCES` — zero runtime changes. Shared helpers live in `scripts/lib/` (`scrape.mjs`, `r2.mjs`).
 - `scripts/import-ofac.mjs` reads OFAC's enhanced XML (local file or download), normalizes each entity to `{ id, identityId, type, programs, sanctionsTypes, names[], cryptoAddresses[]? }` (`cryptoAddresses` — `{ currency, address }` from "Digital Currency Address - *" features — is only present when non-empty), writes `data/ofac-entities.json`, and optionally PUTs to R2 via `@aws-sdk/client-s3`. The SDK is a devDep — runtime never touches it.
 
 ## Data shape
@@ -60,5 +62,5 @@ XML quirks worth knowing:
 
 - Don't import anything from `lib/` into the import script (or vice versa) unless it's pure utility — the script uses Node's `fs`/`@aws-sdk`, which Next.js shouldn't bundle into the API route.
 - If you change the JSON payload shape (`scripts/import-ofac.mjs` output), also update `lib/ofac-data.js` (`payload.entities` is the contract).
-- `app/page.js` is a single-file client-component landing card with two live query testers (name + address inputs that fetch `/api` and render results; uses `/ofac-logo.png`, plain inline CSS, no Tailwind). `app/layout.js` exists only to satisfy App Router's root-layout requirement.
+- `app/page.js` is a single-file client-component landing card with two live query testers (name + address inputs that fetch `/api` and render results; plain inline CSS, no Tailwind). `app/report/page.js` is the community report form (same visual style, Spanish UI, posts to `/api/report`). `app/layout.js` exists only to satisfy App Router's root-layout requirement.
 - `*.xml` / `*.XML` is `.gitignore`d (matches `sdn_enhanced.xml`, legacy `SDN.XML`); the canonical source is OFAC's URL or R2.

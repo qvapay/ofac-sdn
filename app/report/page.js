@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const INITIAL = {
 	tipo: 'persona',
@@ -17,14 +17,19 @@ const INITIAL = {
 }
 
 export default function ReportPage() {
+
 	const [form, setForm] = useState(INITIAL)
 	const [state, setState] = useState({ status: 'idle' })
+	// Synchronous re-entry guard: `loading` state only takes effect after a
+	// re-render, so a fast double-submit could POST twice without this.
+	const submittingRef = useRef(false)
 
 	const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 	const loading = state.status === 'loading'
 
 	async function submit(e) {
 		e.preventDefault()
+		if (submittingRef.current) return
 		if (form.nombre.trim().length < 3) {
 			setState({ status: 'error', message: 'El nombre es obligatorio (mínimo 3 caracteres).' })
 			return
@@ -33,6 +38,7 @@ export default function ReportPage() {
 			setState({ status: 'error', message: 'Incluye al menos un enlace (http…) como evidencia.' })
 			return
 		}
+		submittingRef.current = true
 		setState({ status: 'loading' })
 		try {
 			const res = await fetch('/api/report', {
@@ -40,13 +46,17 @@ export default function ReportPage() {
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(form),
 			})
+			if (!res.ok) {
+				// The API sends JSON errors ({ error }); infra errors may not be JSON.
+				const message = await res.json().then((d) => d.error).catch(() => null)
+				throw new Error(message ?? `HTTP ${res.status}`)
+			}
 			const data = await res.json()
-			if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
 			setState({ status: 'done', issue: data.issue, number: data.number })
 			setForm(INITIAL)
 		} catch (err) {
 			setState({ status: 'error', message: err.message })
-		}
+		} finally { submittingRef.current = false }
 	}
 
 	return (

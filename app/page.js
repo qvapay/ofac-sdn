@@ -15,12 +15,15 @@ function Screener({ param, label, mode, placeholder, hint, examples }) {
 		setState({ status: 'loading' })
 		try {
 			const res = await fetch(`/api?${param}=${encodeURIComponent(q)}`)
+			if (!res.ok) {
+				// The API sends JSON errors ({ error }), but infra errors (proxy
+				// timeouts, platform 5xx pages) may not be JSON — fall back to status.
+				const message = await res.json().then((d) => d.error).catch(() => null)
+				throw new Error(message ?? `HTTP ${res.status}`)
+			}
 			const data = await res.json()
-			if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
 			setState({ status: 'done', data })
-		} catch (err) {
-			setState({ status: 'error', message: err.message })
-		}
+		} catch (err) { setState({ status: 'error', message: err.message }) }
 	}
 
 	function tryExample(example) {
@@ -77,8 +80,8 @@ function Screener({ param, label, mode, placeholder, hint, examples }) {
 							<strong>{state.data.total} match{state.data.total > 1 ? 'es' : ''}</strong> found
 							<span className="took">{state.data.tookMs} ms</span>
 						</div>
-						{state.data.results.slice(0, 5).map((r, i) => (
-							<div className="entity" key={i}>
+						{state.data.results.slice(0, 5).map((r) => (
+							<div className="entity" key={r.currency ? `${r.entity.id}-${r.currency}` : r.entity.id}>
 								<div className="entity-name">
 									<span className="entity-text">{r.matchedName?.full ?? r.matchedAddress}</span>
 									<span className="score" title="Match score">{r.score}</span>

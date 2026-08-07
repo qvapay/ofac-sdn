@@ -21,9 +21,12 @@ import * as pcc from './sources/pcc.mjs'
 import * as anpp from './sources/anpp.mjs'
 import * as fhrc from './sources/fhrc.mjs'
 import * as community from './sources/community.mjs'
+import * as un from './sources/un.mjs'
+import * as eu from './sources/eu.mjs'
+import * as uk from './sources/uk.mjs'
 import { r2Client, putJson, getJson } from './lib/r2.mjs'
 
-const SOURCES = [pcc, anpp, fhrc, community]
+const SOURCES = [pcc, anpp, fhrc, community, un, eu, uk]
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = resolve(__dirname, '../data')

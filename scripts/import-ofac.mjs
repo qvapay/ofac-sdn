@@ -99,6 +99,8 @@ function normalizeEntity(raw) {
 		return [{ currency: type.split(' - ')[1] ?? null, address }]
 	})
 
+	const identifiers = identifiersOf(raw)
+
 	return {
 		id,
 		identityId: textOf(raw.generalInfo?.identityId),
@@ -107,6 +109,55 @@ function normalizeEntity(raw) {
 		sanctionsTypes: toArray(raw.sanctionsTypes?.sanctionsType).map(textOf).filter(Boolean),
 		names,
 		...(cryptoAddresses.length ? { cryptoAddresses } : {}),
+		...identifiers,
+	}
+}
+
+// Secondary identifiers a compliance reviewer needs to tell a namesake from the listed party:
+// date and place of birth, nationality and citizenship, address countries, the date an
+// organization was established, and the type and issuing country of identity documents
+// (document numbers are left out on purpose: the runtime only needs to compare, not to
+// republish them). Keys are only present when the entity has data for them.
+const FEATURE_LISTS = {
+	'Place of Birth': 'placesOfBirth',
+	'Nationality Country': 'nationalities',
+	'Citizenship Country': 'citizenships',
+	'Gender': 'genders',
+}
+
+function dateFeature(feature) {
+	const d = feature.valueDate || {}
+	const out = {
+		value: textOf(feature.value),
+		from: textOf(d.fromDateBegin),
+		to: textOf(d.toDateEnd),
+		approximate: d.isApproximate === true || d.isApproximate === 'true',
+	}
+	return out.value || out.from ? out : null
+}
+
+function identifiersOf(raw) {
+	const lists = {}
+	const birthDates = []
+	const establishedDates = []
+	for (const feature of toArray(raw.features?.feature)) {
+		const type = (textOf(feature.type) ?? '').trim()
+		if (type === 'Birthdate') { const d = dateFeature(feature); if (d) birthDates.push(d); continue }
+		if (type === 'Organization Established Date') { const d = dateFeature(feature); if (d) establishedDates.push(d); continue }
+		const key = FEATURE_LISTS[type]
+		const value = textOf(feature.value)
+		if (key && value) (lists[key] ||= []).includes(value) || lists[key].push(value)
+	}
+	const addressCountries = [...new Set(toArray(raw.addresses?.address).map((a) => textOf(a.country)).filter(Boolean))]
+	const identityDocuments = toArray(raw.identityDocuments?.identityDocument)
+		.map((doc) => ({ type: textOf(doc.type), issuingCountry: textOf(doc.issuingCountry) }))
+		.filter((doc) => doc.type || doc.issuingCountry)
+	return {
+		...(birthDates.length ? { birthDates } : {}),
+		...(establishedDates.length ? { establishedDates } : {}),
+		...lists,
+		...(addressCountries.length ? { addressCountries } : {}),
+		...(identityDocuments.length ? { identityDocuments } : {}),
 	}
 }
 

@@ -267,7 +267,7 @@ Tempting — the JSON is ~8 MB and would fit in a serverless function bundle. Bu
 
 - **Substring matches aren't free**: a query of `"khan"` will match dozens of entities containing that token. Filter with `minScore=85+` for stricter results, or post-process the response.
 - **No phonetic matching**: Soundex/Metaphone aren't applied. For matches across radically different scripts (e.g. Cyrillic-only name vs. Latin query), you'll rely on OFAC's own transliterations being in the dataset (they usually are).
-- **No address/DOB filtering**: this scores names only. Real compliance flows should layer additional checks (DOB, nationality, addresses) on the returned candidates.
+- **No address/DOB filtering**: this scores names only. Real compliance flows should layer additional checks on the returned candidates. For OFAC entities each result carries the secondary identifiers from the Enhanced XML when the entity has them: `birthDates` (`value`, `from`, `to`, `approximate`), `placesOfBirth`, `nationalities`, `citizenships`, `genders`, `addressCountries`, `establishedDates` (organizations) and `identityDocuments` (`type`, `issuingCountry`; numbers are not republished). Re-run `npm run import:upload` to publish them.
 - **Not a substitute for legal review**: hits are leads, not verdicts.
 
 ## Stack

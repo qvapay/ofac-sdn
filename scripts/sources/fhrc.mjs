@@ -4,6 +4,7 @@
 // Supabase table (`represores`, anon read via RLS, ~1.7k rows). We discover
 // the Supabase URL and anon key from the deployed JS bundle on every run so a
 // redeploy that renames the bundle or rotates the key doesn't break us.
+import { gunzipSync } from 'node:zlib'
 import { fetchHtml, cleanText, slugify } from '../lib/scrape.mjs'
 
 export const id = 'fhrc'
@@ -14,12 +15,8 @@ const BASE = 'https://represorescubanosfhrc.com'
 const PAGE_SIZE = 1000 // PostgREST caps responses at 1000 rows
 const MAX_PAGES = 50 // hard stop in case pagination misbehaves
 
-async function discoverSupabase() {
-	const html = await fetchHtml(`${BASE}/represores`)
-	const bundlePath = html.match(/\/assets\/index-[\w-]+\.js/)?.[0]
-	if (!bundlePath) throw new Error('fhrc: no JS bundle reference found in the page HTML')
-
-	const bundle = await fetchHtml(new URL(bundlePath, BASE).href)
+// Supabase URL + anon key from a bundle's source.
+function supabaseFromBundle(bundle) {
 	const url = bundle.match(/https:\/\/[a-z0-9]+\.supabase\.co/)?.[0]
 	const key = (bundle.match(/eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g) ?? []).find((jwt) => {
 		try {
@@ -29,8 +26,47 @@ async function discoverSupabase() {
 			return false
 		}
 	})
-	if (!url || !key) throw new Error('fhrc: could not extract the Supabase URL/anon key from the bundle')
-	return { url, key }
+	return url && key ? { url, key } : null
+}
+
+async function fromLiveSite() {
+	const html = await fetchHtml(`${BASE}/represores`)
+	const bundlePath = html.match(/\/assets\/index-[\w-]+\.js/)?.[0]
+	if (!bundlePath) throw new Error('no JS bundle reference found in the page HTML')
+	const found = supabaseFromBundle(await fetchHtml(new URL(bundlePath, BASE).href))
+	if (!found) throw new Error('could not extract the Supabase URL/anon key from the bundle')
+	return found
+}
+
+// The site has been unreachable since early November 2026 (TLS errors, then 404 on /represores),
+// while its Supabase table kept serving the same rows. The last archived bundle on the Wayback
+// Machine still names the project and its public anon key, so we read them from there.
+async function fromArchivedBundle() {
+	const cdx = await fetchHtml('https://web.archive.org/cdx/search/cdx?url=represorescubanosfhrc.com/assets/&matchType=prefix&output=json&fl=timestamp,original&filter=statuscode:200', { headers: { accept: 'application/json' } })
+	const rows = JSON.parse(cdx).slice(1).filter(([, original]) => /\/assets\/index-[\w-]+\.js$/.test(original))
+	rows.sort((a, b) => b[0].localeCompare(a[0]))
+	for (const [timestamp, original] of rows.slice(0, 5)) {
+		// `id_` returns the archived bytes untouched; they may still be gzip-compressed.
+		const res = await fetch(`https://web.archive.org/web/${timestamp}id_/${original}`, { signal: AbortSignal.timeout(60000) })
+		if (!res.ok) continue
+		let buf = Buffer.from(await res.arrayBuffer())
+		if (buf[0] === 0x1f && buf[1] === 0x8b) buf = gunzipSync(buf)
+		const found = supabaseFromBundle(buf.toString('utf-8'))
+		if (found) return found
+	}
+	throw new Error('no archived bundle with the Supabase URL/anon key')
+}
+
+async function discoverSupabase() {
+	if (process.env.FHRC_SUPABASE_URL && process.env.FHRC_SUPABASE_ANON_KEY) {
+		return { url: process.env.FHRC_SUPABASE_URL, key: process.env.FHRC_SUPABASE_ANON_KEY }
+	}
+	try {
+		return await fromLiveSite()
+	} catch (err) {
+		console.warn(`[lists] fhrc: site unavailable (${err.message}); using the last archived bundle`)
+		return await fromArchivedBundle()
+	}
 }
 
 export async function fetchEntities() {

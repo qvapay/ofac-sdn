@@ -20,7 +20,7 @@ Plain JavaScript throughout (no TypeScript). House style is tabs and no semicolo
 
 Flags for `import-ofac.mjs`: `--xml=/path/to.xml`, `--url=https://...`, `--out=...`, `--upload`. The `npm run import*` scripts use `node --env-file-if-exists=.env`, so a local `.env` is picked up automatically (needs Node ≥ 22; CI uses Node 22).
 
-No test runner is configured. Manual check: `curl 'http://localhost:3000/api?name=putin'` and `?address=0x098B716B8Aaf21512996dC57EB0615e2383E2f96` (Lazarus Group ETH wallet, should return `total: 1`).
+`npm test` runs the `node:test` suite in `test/` (normalization, scoring and an end-to-end `searchName` against a tiny local dataset). Manual check: `curl 'http://localhost:3000/api?name=putin'` and `?address=0x098B716B8Aaf21512996dC57EB0615e2383E2f96` (Lazarus Group ETH wallet, should return `total: 1`).
 
 `data/` and `*.xml` are gitignored — generated datasets never enter the repo; R2 is the source of truth.
 
@@ -39,7 +39,7 @@ The hot path (`GET /api?name=...`):
 
 1. `lib/ofac-data.js` — singleton loader (`getDataset()`, a module-scoped promise; a failed load resets it so the next request retries). First call resolves the list set (manifest or `OFAC_INDEX_URL` fallback), fetches every list JSON in parallel, flattens entities into one array (tagging `entity.list` = list id and defaulting `entity.source`), and builds a trigram inverted index (trigram → `Uint32Array` of name indices; each `names[]` entry also carries its `list` id) plus `cryptoIndex` (lowercased digital-currency address → matches, exact lookup). Fluid Compute reuses instances across requests, so cold-start cost (~2–4 s) is paid once per warm instance. **A warm instance never refetches** — see "Keeping data fresh" below.
 2. `lib/search.js` — two-stage search. **Stage 1**: tally trigram overlap between the query and every indexed name, keep the top `candidatePool` (default 400) name indices. **Stage 2**: run the full scorer on each candidate; collapse to best score per *entity* (a single entity has many aliases). Return ranked top `limit`.
-3. `lib/scoring.js` — `score(query, target)` returns 0–100, taking `max(jaroWinkler, tokenSetRatio)`. Normalization strips accents (NFD), lowercases, and collapses non-alphanumeric to spaces. Token-set ratio is rapidfuzz-style (intersection + diffs → three sorted strings → best Jaro-Winkler among them), which makes word order and extra middle names mostly free.
+3. `lib/scoring.js` — `score(query, target)` returns 0–100, taking `max(jaroWinkler, tokenSetRatio)`. Normalization strips accents (NFD + `\p{M}`), lowercases, and collapses everything but letters and digits **of any script** (`\p{L}\p{N}`) to spaces — an ASCII-only class would erase every Cyrillic/Arabic/Persian alias (~11% of SDN names) and turn a query in those scripts into a silent 0-match. Token-set ratio is rapidfuzz-style (intersection + diffs → three sorted strings → best Jaro-Winkler among them), which makes word order and extra middle names mostly free.
 
 The route itself is `force-dynamic`, Node runtime, `maxDuration = 60` (to survive the first cold start).
 

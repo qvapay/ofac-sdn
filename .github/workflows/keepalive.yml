@@ -1,0 +1,27 @@
+name: Keep scheduled imports enabled
+
+# GitHub disables scheduled workflows in a public repository after 60 days without
+# activity. That happened to the three imports in November 2026 and the lists went
+# stale without anyone noticing. Re-enabling them through the API once a month keeps
+# them (and this workflow) alive.
+on:
+  schedule:
+    - cron: '17 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-enable the scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for wf in ofac-import.yml sanctions-import.yml cuba-import.yml keepalive.yml; do
+            gh api -X PUT "repos/$REPO/actions/workflows/$wf/enable" && echo "enabled $wf"
+          done

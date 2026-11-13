@@ -14,7 +14,7 @@
 // Env vars for upload: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
 // R2_BUCKET (and R2_KEY if the OFAC JSON lives under a non-default key).
 
-import { writeFile, mkdir } from 'node:fs/promises'
+import { writeFile, mkdir, appendFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as pcc from './sources/pcc.mjs'
@@ -56,15 +56,22 @@ async function main() {
 
 	await mkdir(DATA_DIR, { recursive: true })
 	const results = []
+	const failures = []
 
+	// One broken source (a site redesign, a moved file, a 500 from a government server) must not hold the
+	// others back: its previous list stays in R2 untouched and the rest are refreshed. The run still exits
+	// non-zero at the end so the workflow shows red and someone looks at it.
 	for (const src of sources) {
 		const started = Date.now()
 		console.log(`[lists] scraping ${src.id} (${src.label})…`)
-		const entities = await src.fetchEntities()
-		// A redesigned page that no longer matches our selectors would come back
-		// empty — never overwrite a working list with nothing. Sources that can
-		// legitimately be empty (community, pre-first-approval) opt out.
-		if (entities.length === 0 && !src.allowEmpty) throw new Error(`Source "${src.id}" returned 0 entities — refusing to overwrite the list`)
+		let entities
+		try {
+			entities = await scrape(src)
+		} catch (err) {
+			failures.push({ id: src.id, label: src.label, error: err.message })
+			console.error(`[lists] ${src.id} failed, its previous list stays in place: ${err.message}`)
+			continue
+		}
 
 		const payload = {
 			listId: src.id,
@@ -80,8 +87,43 @@ async function main() {
 		results.push({ src, json })
 	}
 
-	if (!args.upload) return
+	if (args.upload) await upload(results)
+	await reportFailures(failures)
+}
 
+// Each source gets a second chance: the EU and UK servers return the odd 500 or a truncated body.
+// A source that legitimately returns nothing would overwrite a working list with an empty one, so
+// 0 entities counts as a failure unless the source opts out (community, before its first approval).
+async function scrape(src, attempts = 2) {
+	let lastErr
+	for (let attempt = 1; attempt <= attempts; attempt++) {
+		try {
+			const entities = await src.fetchEntities()
+			if (entities.length === 0 && !src.allowEmpty) throw new Error('returned 0 entities, refusing to overwrite the list')
+			return entities
+		} catch (err) {
+			lastErr = err
+			if (attempt < attempts) {
+				console.warn(`[lists] ${src.id} attempt ${attempt} failed (${err.message}); retrying`)
+				await new Promise((r) => setTimeout(r, 10000))
+			}
+		}
+	}
+	throw lastErr
+}
+
+async function reportFailures(failures) {
+	if (failures.length === 0) return
+	const lines = failures.map((f) => `- ${f.id} (${f.label}): ${f.error}`)
+	console.error(`[lists] ${failures.length} source(s) failed; their previous lists were kept:\n${lines.join('\n')}`)
+	if (process.env.GITHUB_STEP_SUMMARY) {
+		await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Lists not refreshed\n\nTheir previous version stays in R2.\n\n${lines.join('\n')}\n`)
+	}
+	process.exitCode = 1
+}
+
+async function upload(results) {
+	if (results.length === 0) return
 	const client = await r2Client()
 	for (const { src, json } of results) {
 		const key = `lists/${src.id}.json`

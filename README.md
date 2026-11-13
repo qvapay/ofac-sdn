@@ -169,7 +169,7 @@ Two scrapers ship in [`scripts/sources/`](scripts/sources):
 
 - **`pcc`** — the [PCC people directory](https://www.pcc.cu/index.php/directorio-personas) (~100 senior party officials, with cargo and entity)
 - **`anpp`** — the [ANPP deputies roster](https://www.parlamentocubano.gob.cu/diputados) (~470 deputies, with cargo and org memberships)
-- **`fhrc`** — the [FHRC Represores Cubanos database](https://represorescubanosfhrc.com/represores) (~1,700 documented individuals, with institution; sourced from the site's public Supabase API since the frontend is a SPA)
+- **`fhrc`** — the [FHRC Represores Cubanos database](https://represorescubanosfhrc.com/represores) (~1,700 documented individuals, with institution; sourced from the site's public Supabase API since the frontend is a SPA) If the site is down (as since early November 2026) the importer reads the Supabase project from the last archived copy of the site on the Wayback Machine.
 
 ```bash
 npm run import:lists          # scrape → data/{pcc,anpp,fhrc}-entities.json

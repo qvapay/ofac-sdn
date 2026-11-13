@@ -37,8 +37,10 @@ jobs:
           R2_KEY: ${{ secrets.R2_KEY }}
 
       # Warm Fluid instances cache the dataset in memory forever; a redeploy
-      # recycles them so the API picks up the new index immediately.
+      # recycles them so the API picks up the new index immediately. It also runs
+      # when one source failed: the import still uploaded the lists that worked.
       - name: Trigger Vercel redeploy
+        if: ${{ !cancelled() }}
         env:
           DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |

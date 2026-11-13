@@ -10,7 +10,8 @@
 		"import:upload": "node --env-file-if-exists=.env scripts/import-ofac.mjs --upload",
 		"import:lists": "node --env-file-if-exists=.env scripts/import-lists.mjs",
 		"import:lists:upload": "node --env-file-if-exists=.env scripts/import-lists.mjs --upload",
-		"doctor": "npx react-doctor@latest"
+		"doctor": "npx react-doctor@latest",
+		"test": "node --test"
 	},
 	"dependencies": {
 		"next": "^16.3.0",

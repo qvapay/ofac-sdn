@@ -35,7 +35,7 @@ Most teams reach for an enterprise compliance vendor and pay per-call. This repo
 
 - **Sub-10 ms warm response** on a single function instance
 - **Fuzzy scoring tuned for names**: Jaro-Winkler + token-set ratio, so `"Maria del Carmen Lopez"` matches `"LOPEZ, Maria Carmen"` at 100
-- **Diacritic & case-insensitive**: `José` → `jose`, `AL-QA'IDA` → `al qaida`
+- **Diacritic & case-insensitive**: `José` → `jose`, `AL-QA'IDA` → `al qaida`, `Đorđević` → `dordevic`, `Strauß` → `strauss`
 - **All OFAC programs** — Russia/Ukraine, Iran, Cuba, DPRK, SDGT, CAATSA, narcotics, etc. — surfaced in the response
 - **No database**: dataset lives as a single JSON file in Cloudflare R2 (or any object store)
 - **No egress costs**: Cloudflare R2 has zero egress fees
